@@ -23,7 +23,7 @@ else:
         exit()
 
 for l in code_lines: 
-    instruction_memory[initial_address+i*4] = int(l) # Adiciona uma instrução em um endereço separado por 4 bytes
+    instruction_memory[initial_address+i*4] = int(l,2) # Adiciona uma instrução em um endereço separado por 4 bytes
     i+=1
 
 
@@ -39,3 +39,4 @@ Outras entradas causarão o fechamento do simulador.
 if choice == '1':
     #------------EXECUÇÃO PASSO A PASSO------------
     p = Pipeline(instruction_memory)
+    #p.__run_step_by_step()
