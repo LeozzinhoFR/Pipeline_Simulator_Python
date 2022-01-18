@@ -9,7 +9,7 @@ i = 0 # Índice para orientar endereçamento
 
 code_lines = ''
 
-filename = input('\nDigite o nome do arquivo. Caso queira fazer a entrada via teclado, insira -1 como entrada.')
+filename = input('\nDigite o nome do arquivo. Caso queira fazer a entrada via teclado, insira -1 como entrada.\n')
 
 if(filename == '-1'):
     code = input('Insira o código de máquina')
@@ -39,4 +39,4 @@ Outras entradas causarão o fechamento do simulador.
 if choice == '1':
     #------------EXECUÇÃO PASSO A PASSO------------
     p = Pipeline(instruction_memory)
-    #p.__run_step_by_step()
+    p.run_step_by_step()
