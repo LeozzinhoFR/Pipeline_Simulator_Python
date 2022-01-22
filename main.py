@@ -1,6 +1,7 @@
 #Etapa de preparação de variáveis
 
 from pipeline import Pipeline
+from binary import Binary
 
 
 initial_address = 0 #Endereço da primeira instrução
@@ -8,6 +9,9 @@ instruction_memory = {} #Dicionário para associar uma instrução a um endereç
 i = 0 # Índice para orientar endereçamento
 
 code_lines = ''
+
+#print(-1 * ((int('11111111111111111111111111111111', 2) ^ 0xFFFFFFFF) + 1))
+
 
 filename = input('\nDigite o nome do arquivo. Caso queira fazer a entrada via teclado, insira -1 como entrada.\n')
 
@@ -23,7 +27,7 @@ else:
         exit()
 
 for l in code_lines: 
-    instruction_memory[initial_address+i*4] = int(l,2) # Adiciona uma instrução em um endereço separado por 4 bytes
+    instruction_memory[initial_address+i*4] = Binary(l) # Adiciona uma instrução em um endereço separado por 4 bytes
     i+=1
 
 
@@ -38,5 +42,8 @@ Outras entradas causarão o fechamento do simulador.
 
 if choice == '1':
     #------------EXECUÇÃO PASSO A PASSO------------
+    for i in instruction_memory:
+        print(instruction_memory[i].get_code(), end = '\t')
     p = Pipeline(instruction_memory)
     p.run_step_by_step()
+
