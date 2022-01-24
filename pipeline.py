@@ -17,6 +17,13 @@ class Pipeline:
         self.__bubble_register(1)
         self.__bubble_register(2)
         self.__bubble_register(3)
+        
+        self.__forward_unit = {
+            'RD' : 0,
+            'replace_a' : 0,
+            'replace_b' : 0,
+            'out' : 0
+        }
 
     def run_step_by_step(self):
         while self.__clock_cycle - self.__last_cycle < 5: #Checa se já se passaram 5 etapas desde o último ciclo com instrução válida
@@ -116,6 +123,10 @@ class Pipeline:
                 
     def __execution(self):
         #Passagem de valores de um registrador pipeline para o próximo
+        if self.__forward_unit['replace_a'] == 1:
+            self.__id_ex['A'] = self.__forward_unit['out']
+        elif self.__forward_unit['replace_b'] == 1:
+            self.__id_ex['B'] = self.__forward_unit['out']
         self.__ex_mem['mem_control'] = self.__id_ex['mem_control'] #Passagem de sinais de controle
         self.__ex_mem['wb_control'] = self.__id_ex['wb_control']
         self.__ex_mem['B'] = self.__id_ex['B']
@@ -135,13 +146,19 @@ class Pipeline:
         self.__ex_mem['zero'] = zero
         self.__ex_mem['ALUOut'] = out
 
+        
+
+        self.__forward_unit['out'] = out
+        self.__forward_unit['RD'] = self.__ex_mem['RD']
+
         #Branch
         im = Binary(code = self.__id_ex['imm'])
         im.sl_bits(2)
         self.__ex_mem['branch_tg'] = im.get_decimal() + self.__id_ex['pc']
         if self.__ex_mem['mem_control']['Branch'] == 1 and self.__ex_mem['zero'] == 1: 
             if self.__ex_mem['branch_tg'] != self.__id_ex['pc']: #testa se próxima instrução não será o destino do branch
-                self.__ex_mem['mem_control']['branch_aux'] = 1        
+                self.__ex_mem['mem_control']['branch_aux'] = 1       
+
     def __instruction_fetch(self):
         if self.__pc in self.__instruction_memory:
             self.__if_id['instruction'] = self.__instruction_memory[self.__pc]
@@ -165,6 +182,8 @@ class Pipeline:
         print(self.__ex_mem)
         print('\nMEM_WB\n')
         print(self.__mem_wb)
+        print('\nFORWARD UNIT\n')
+        print(self.__forward_unit)
 
     def __instruction_decode(self):
         if self.__ex_mem['mem_control']['branch_aux'] == 1:
@@ -189,6 +208,12 @@ class Pipeline:
 
         self.__id_ex['imm'] = Binary(code = instruction[16:]).sign_extend(32)
         if opcode == '000000': #INSTRUÇÃO TIPO R
+
+            if rs == self.__forward_unit['RD']:
+                self.__forward_unit['replace_a']
+            elif rt == self.__forward_unit['RD']:
+                self.__forward_unit['replace_b']
+
             if func == '100000': #ADD
                 self.__id_ex['wb_control'] = {
                     'MemtoReg': 0,
@@ -223,6 +248,10 @@ class Pipeline:
                     'ALUOp': '000'
                 }
         elif opcode == '001000': #addi
+
+            if rt == self.__forward_unit['RD']:
+                self.__forward_unit['replace_a'] = 1
+
             self.__id_ex['wb_control'] = {
                 'MemtoReg': 0,
                 'RegWrite': 1
