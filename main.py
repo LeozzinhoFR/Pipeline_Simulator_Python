@@ -45,5 +45,5 @@ if choice == '1':
     for i in instruction_memory:
         print(instruction_memory[i].get_code(), end = '\t')
     p = Pipeline(instruction_memory)
-    p.run_step_by_step()
+    p.run()
 
