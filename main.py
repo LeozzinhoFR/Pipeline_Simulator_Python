@@ -43,7 +43,7 @@ Outras entradas causarão o fechamento do simulador.
 if choice == '1':
     #------------EXECUÇÃO PASSO A PASSO------------
     for i in instruction_memory:
-        print(instruction_memory[i].get_code(), end = '\t')
+        print(str(i)+': '+instruction_memory[i].get_code(), end = '\t')
     p = Pipeline(instruction_memory)
     p.run()
 

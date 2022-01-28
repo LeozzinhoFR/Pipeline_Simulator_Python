@@ -49,10 +49,11 @@ class EX_MEM:
 
         #Cálculos da ALU
         alu = ALU(self.prev.ex_control['ALUOp'])
+
         if self.prev.ex_control['ALUSrc'] == 0:
-            zero, alu_out = alu.compute(A, B)
+            zero, alu_out = alu.compute(A, B, Binary(code = self.prev.sa).get_decimal())
         else:
-            zero, alu_out = alu.compute(A, Binary(code = self.prev.imm).get_decimal())
+            zero, alu_out = alu.compute(A, Binary(code = self.prev.imm).get_decimal(), Binary(code = self.prev.sa).get_decimal())
         self.zero = zero
         self.ALUOut = alu_out 
 

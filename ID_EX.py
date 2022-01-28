@@ -12,6 +12,7 @@ class ID_EX:
         self.RD = 0
         self.imm = '0'
         self.pc = 0
+        self.sa = '00000'
         self.wb_control = {
             'MemtoReg': 0,
             'RegWrite': 0
@@ -33,8 +34,9 @@ class ID_EX:
         self.pc = self.prev.pc
         instruction = self.prev.instruction
         i_code = instruction.get_code() #String do número binário para decodifação
-        
+
         self.imm = Binary(code = i_code[16:]).sign_extend(32)
+        self.sa = i_code[21:26]
         
         #Dados de controle calculados
         opcode = i_code[:6]
@@ -57,41 +59,39 @@ class ID_EX:
         func = instruction[-6:]
 
         if opcode == '000000': #Tipo R
+            wb_control = {
+                'MemtoReg': 0,
+                'RegWrite': 1
+            }
+
+            mem_control = {
+                'Branch': 0,
+                'MemRead': 0,
+                'MemWrite': 0,
+                'branch_aux': 0
+            }
+            
+            ex_control = {
+                'RegDst': 1,
+                'ALUSrc': 0,
+                'ALUOp': '110' #ALUOp de soma por padrão, outras instruções alteram o valor aqui
+            }
+
             if func == '100000': #ADD
-                return ({
-                    'MemtoReg': 0,
-                    'RegWrite': 1
-                },
-                {
-                    'Branch': 0,
-                    'MemRead': 0,
-                    'MemWrite': 0,
-                    'branch_aux': 0
-                },
-                {
-                    'RegDst': 1,
-                    'ALUSrc': 0,
-                    'ALUOp': '010'
-                },
-                'r')
-            else:
-                #FAILSAFE POR ENQUANTO
-                return ({
-                    'MemtoReg': 0,
-                    'RegWrite': 0
-                },
-                {
-                    'Branch': 0,
-                    'MemRead': 0,
-                    'MemWrite': 0,
-                    'branch_aux': 0
-                },
-                {
-                    'RegDst': 0,
-                    'ALUSrc': 0,
-                    'ALUOp': '000'
-                },
-                'r')
+                ex_control['ALUOp'] = '010'
+            elif func == '100010': #SUB
+                ex_control['ALUOp'] = '110'
+            elif func == '100100': #AND:
+                ex_control['ALUOp'] = '000'
+            elif func == '100101': #OR
+                ex_control['ALUOp'] = '001'
+            elif func == '101010': #SLT
+                ex_control['ALUOp'] = '111'
+            elif func == '000000':
+                ex_control['ALUOp'] = '100'
+                
+            return (wb_control, mem_control, ex_control, 'r')
+
         elif opcode == '001000': #addi
             return ({
                 'MemtoReg': 0,
@@ -100,6 +100,23 @@ class ID_EX:
             {
                 'Branch': 0,
                 'MemRead': 0,
+                'MemWrite': 0,
+                'branch_aux': 0
+            },
+            {
+                'RegDst': 0,
+                'ALUSrc': 1,
+                'ALUOp': '010'
+            },
+            'i')
+        elif opcode == '100011':
+            return ({
+                'MemtoReg': 1,
+                'RegWrite': 1
+            },
+            {
+                'Branch': 0,
+                'MemRead': 1,
                 'MemWrite': 0,
                 'branch_aux': 0
             },
