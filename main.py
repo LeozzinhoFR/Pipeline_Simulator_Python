@@ -27,23 +27,24 @@ else:
         exit()
 
 for l in code_lines: 
-    instruction_memory[initial_address+i*4] = Binary(l) # Adiciona uma instrução em um endereço separado por 4 bytes
-    i+=1
+    if l != '\n':
+        instruction_memory[initial_address+i*4] = Binary(l) # Adiciona uma instrução em um endereço separado por 4 bytes
+        i+=1
 
 
 #Etapa para interação com usuário:
+p = Pipeline(instruction_memory)
+choice = 1
+while choice == 1 or choice==2 or choice==3:
+    choice = input('''
+    (1) Execução passo a passo
+    (2) Execução direta
+    (3) Reset
+    Outras entradas causarão o fechamento do simulador.
+    ''')
 
-choice = input('''
-(1) Execução passo a passo
-(2) Execução direta
-(3) Reset
-Outras entradas causarão o fechamento do simulador.
-''')
-
-if choice == '1':
-    #------------EXECUÇÃO PASSO A PASSO------------
-    for i in instruction_memory:
-        print(str(i)+': '+instruction_memory[i].get_code(), end = '\t')
-    p = Pipeline(instruction_memory)
-    p.run()
+    if choice == '1':
+        p.run(True)
+    elif choice == '2':
+        p.run(False)
 

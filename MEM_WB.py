@@ -9,6 +9,7 @@ class MEM_WB:
 
     def empty(self): 
         self.wb = 0
+        self.pc = 0
         self.ALUOut = 0
         self.RD = 0
         self.wb_control = {
@@ -21,8 +22,9 @@ class MEM_WB:
 
         self.ALUOut = self.prev.ALUOut
         self.RD = self.prev.RD
-        
+        self.pc = self.prev.pc
+
         #Load Word
         if self.prev.mem_control['MemRead'] == 1:
-            self.wb = data_memory[self.prev.ALUOut] #Armazena no MEM_WB o valor da memória
+            self.wb = data_memory[self.prev.ALUOut] #Armazena no MEM_WB o valor da memória. ALUOut deve ser múltiplo de 4
             

@@ -14,6 +14,8 @@ class ALU:
         elif self.code == '001': #OR
             return zero, A|B
         elif self.code == '111': #SLT
+            print('A: '+str(A))
+            print('B: '+str(B))
             return zero, int(A < B)
         elif self.code == '100': #SLL
             return zero, B << sa

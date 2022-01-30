@@ -9,6 +9,7 @@ class EX_MEM:
         self.empty() #Cria o registrador com valores e sinais de controle vazios
 
     def empty(self): 
+        self.pc = 0
         self.branch_tg = 0
         self.zero = 0
         self.ALUOut = 0   
@@ -19,7 +20,10 @@ class EX_MEM:
             'RegWrite': 0
         }
         self.mem_control = {
+            'n_Branch' : 0,
             'Branch': 0,
+            'uncond_jump' : 0, #Sinal para liberar desvio incondicional
+            'jr' : 0, #Sinal para liberar desvio via instrução R (jr)
             'branch_aux': 0, #Sinal de controle a mais para facilitar manipulação de tratamento de hazard de controle
             'MemRead': 0,
             'MemWrite': 0
@@ -28,6 +32,7 @@ class EX_MEM:
     def send_info(self, replace_a, replace_b, out): #Dados do parâmetros do pipeline passado são calculados e passados para um novo
         #Valores passados diretamente de um registrador ao outro
         self.wb_control = self.prev.wb_control
+        self.pc = self.prev.pc
         self.mem_control = self.prev.mem_control
         self.B = self.prev.B
 
@@ -38,14 +43,17 @@ class EX_MEM:
         #Hazard de dados
         if replace_a == 1:
             A = out
-        elif replace_b == 1:
+        if replace_b == 1:
             B = out
 
         #Definir registrador destino
-        if self.prev.ex_control['RegDst'] == 1:
+        reg_dst = self.prev.ex_control['RegDst']
+        if reg_dst == 1:
             self.RD = self.prev.RD
-        else:
+        elif reg_dst == 0:
             self.RD = self.prev.RT
+        else:
+            self.RD = '11111' #Caso específico do JAL
 
         #Cálculos da ALU
         alu = ALU(self.prev.ex_control['ALUOp'])
@@ -58,8 +66,14 @@ class EX_MEM:
         self.ALUOut = alu_out 
 
         #Branch
+
+        if self.mem_control['jr'] == 1: 
+            self.branch_tg = A
+            return
+
         im = Binary(code = self.prev.imm)
         im.sl_bits(2)
         self.branch_tg = im.get_decimal() + self.prev.pc
-        if self.mem_control['Branch'] == 1 and self.__ex_mem['zero'] == 1: #BEQ
+        #BEQ e BNE
+        if (self.mem_control['Branch'] == 1 and self.zero == 1) or (self.mem_control['n_Branch'] == 1 and self.zero == 0):
             self.mem_control['branch_aux'] = 1   #indica que houve desvio e as prox. instruções no pipeline serão canceladas
