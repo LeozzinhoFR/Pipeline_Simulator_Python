@@ -4,6 +4,7 @@ from EX_MEM import EX_MEM
 from ID_EX import ID_EX
 from IF_ID import IF_ID
 from binary import Binary
+from branchPredictor import BranchPredictor
 import time
 class Pipeline:
 
@@ -14,6 +15,9 @@ class Pipeline:
         self.pc = 0
         self.instruction_memory = memory
         self.data_memory = {i : 0 for i in range(0,512,4)}
+        self.branch_predictor = BranchPredictor()
+        self.stats = {'cycles': 0, 'stalls': 0, 'flushes': 0}
+
 
         #variáveis para armazenar a instrução sendo executada em cada estágio do pipeline
         self.fetch = '00000000000000000000000000000000'
@@ -24,8 +28,41 @@ class Pipeline:
 
     def __initialize_registers(self):
         #Banco de Registradores
-        self.registers = {(Binary(decimal = i, bits = 5)).get_code() : 0 for i in range (0,32)}
-
+        self.registers = {
+            '00000': 0,    # $zero
+            '00001': 0,    # $at
+            '00010': 0,    # $v0
+            '00011': 0,    # $v1
+            '00100': 0,    # $a0
+            '00101': 0,    # $a1
+            '00110': 0,    # $a2
+            '00111': 0,    # $a3
+            '01000': 0,    # $t0
+            '01001': 0,    # $t1
+            '01010': 0,    # $t2
+            '01011': 0,    # $t3
+            '01100': 0,    # $t4
+            '01101': 0,    # $t5
+            '01110': 0,    # $t6
+            '01111': 0,    # $t7
+            '10000': 0,    # $s0
+            '10001': 20,   # $s1
+            '10010': 30,   # $s2
+            '10011': 40,   # $s3
+            '10100': 0,    # $s4
+            '10101': 50,   # $s5
+            '10110': 0,    # $s6
+            '10111': 100,  # $s7
+            '11000': 0,    # $t8
+            '11001': 0,    # $t9
+            '11010': 0,    # $k0
+            '11011': 0,    # $k1
+            '11100': 0,    # $gp
+            '11101': 0,    # $sp
+            '11110': 0,    # $fp (adicionado para resolver o erro)
+            '11111': 0     # $ra
+        }
+        
         #Registradores Pipeline
         self.if_id = IF_ID()
         self.id_ex = ID_EX(self.if_id)
@@ -89,14 +126,33 @@ class Pipeline:
                 self.ex_mem.empty()
 
 
-
+            # Detecção de hazards
+            if self.stall_unit['delay'] > 0:
+                self.stats['stalls'] += 1
+                print(f"STALL detectado no ciclo {self.clock_cycle} - Hazard de dados")
+            elif self.forward_unit['replace_a'] or self.forward_unit['replace_b']:
+                print(f"FORWARDING aplicado no ciclo {self.clock_cycle}")
+           
+           
+           
             #STALL MANAGEMENT
             is_lw = self.ex_mem.wb_control['MemtoReg'] == 1 #Checar se a execução era uma lw para administrar stall em caso de data hazard
             self.stall_unit['delay'] = 0 #Por padrão não há delay, apenas em caso de hazard
 
+            if self.id_ex.mem_control['Branch'] == 1 or self.id_ex.mem_control['n_Branch'] == 1:
+                # Usa predição
+                predicted_taken = self.branch_predictor.predict(self.pc)
+                if predicted_taken:
+                    self.if_id.empty()
+                    target = Binary(code=self.id_ex.imm).get_decimal() + self.id_ex.pc
+                    self.pc = target
+                    self.stats['flushes'] += 1  # Flush se predição errada
+
             #DECODE
             self.decode = self.fetch
             rs, rt, i_type = self.id_ex.send_info(self.registers)
+
+
 
             #Controle de unidade de forwarding
             if self.forward_unit['FWDSrc'] == 0:
@@ -126,7 +182,9 @@ class Pipeline:
                             stall_count+=1
                             self.forward_unit['FWDSrc'] = 1
                         self.forward_unit['replace_b'] = 1
-            
+            if self.forward_unit['replace_a'] or self.forward_unit['replace_b']:
+                self.stats['forwardings'] += 1
+                print(f"FORWARDING aplicado no ciclo {self.clock_cycle}")
 
             #FETCH
             if self.stall_unit['delay'] == 0:
@@ -149,8 +207,12 @@ class Pipeline:
             print('Estágio de MEM: '+self.memory_access)
             print('Estágio de WB: '+self.writeback)
             print('Banco de registradores: ')
-            print(self.registers)
-            print('\n')
+            self.print_registers
+            print('\n\n')
+            self.print_stats
+            f.write('\n\n--------------\n\n')
+            f.write(str(self.registers))
+
             if step_by_step:
                 time.sleep(1.5)
             
@@ -182,6 +244,28 @@ class Pipeline:
         #Output de dados
         for i in self.data_memory:
             data_output.write(str(i)+': '+str(self.data_memory[i])+'\n')
+
+
+    def print_registers(self):
+        print("\nBanco de registradores:")
+        reg_names = ['$zero', '$at', '$v0', '$v1', '$a0', '$a1', '$a2', '$a3',
+                    '$t0', '$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7',
+                    '$s0', '$s1', '$s2', '$s3', '$s4', '$s5', '$s6', '$s7',
+                    '$t8', '$t9', '$k0', '$k1', '$gp', '$sp', '$fp', '$ra']
+        
+        for i, (reg, val) in enumerate(self.registers.items()):
+            print(f"{reg_names[i]}: {val:10}", end='\t')
+            if (i+1) % 4 == 0: print()
+        print()
+    
+    def print_stats(self):
+        print("\n=== ESTATÍSTICAS FINAIS ===")
+        print(f"Ciclos totais: {self.clock_cycle}")
+        print(f"Stalls: {self.stats['stalls']}")
+        print(f"Flushes: {self.stats['flushes']}")
+        print(f"Forwardings: {self.stats['forwardings']}")
+        print(f"Acurácia do preditor de branch: {self.branch_predictor.get_accuracy():.2f}%")
+        print("==========================\n")
 
     def print_pipeline_registers(self, f): #Mostra os pipelines de registrador em cada ciclo de clock em um arquivo de output para testagem
         f.write('\n\n\n-------------------------Ao fim do ciclo '+str(self.clock_cycle)) 

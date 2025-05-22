@@ -65,8 +65,13 @@ class EX_MEM:
         self.zero = zero
         self.ALUOut = alu_out 
 
-        #Branch
 
+        # No EX_MEM após determinar se branch foi tomado
+        actual_taken = (self.mem_control['Branch'] == 1 and self.zero == 1) or \
+                    (self.mem_control['n_Branch'] == 1 and self.zero == 0)
+        self.branch_predictor.update(self.pc, actual_taken)
+
+        #Branch
         if self.mem_control['jr'] == 1: 
             self.branch_tg = A
             return
