@@ -34,7 +34,7 @@ Um simulador didático de pipeline MIPS desenvolvido em Python para o meio Acad�
 
 1. Clone o repositório:
 ```bash
-git clone https://github.com/seu-usuario/simulador-pipeline-mips.git
+git clone https://github.com/LeozzinhoFR/Pipeline_Simulator_Python.git
 cd simulador-pipeline-mips
 ```
 
